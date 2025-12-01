@@ -21,9 +21,9 @@ RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["https://ubiquitous-paprenjak-a1a6d1.netlify.app/"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
