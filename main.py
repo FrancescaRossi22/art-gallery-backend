@@ -12,34 +12,34 @@ load_dotenv()
 
 app = FastAPI()
 
-# 🌍 CORS — aggiungi qui il dominio Netlify
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://prismalab.netlify.app",   # ← SOSTITUISCI con il tuo dominio
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 🗄 Inizializza database
-init_db()
-
-# 📌 Router recensioni
-app.include_router(feedback_router)
-
-
-# 📧 Email settings
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 
+# CORS per Netlify
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ← in produzione metti il dominio Netlify
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-async def send_email_with_optional_file(name, surname, email, message, file):
+# Inizializza DB e router
+init_db()
+app.include_router(feedback_router)
+
+
+async def send_email_with_optional_file(
+    name: str,
+    surname: str,
+    email: str,
+    message: str,
+    file: UploadFile | None,
+) -> bool:
+
     msg = EmailMessage()
     msg["Subject"] = "Nuova richiesta preventivo"
     msg["From"] = SMTP_USERNAME
@@ -59,13 +59,14 @@ Messaggio:
 Inviato automaticamente dal sito PrismaLab
 """)
 
-    if file is not None:
-        try:
-            content = await file.read()
-            filename = file.filename or "attachment"
-            msg.add_attachment(content, maintype="application", subtype="octet-stream", filename=filename)
-        except:
-            pass
+    if file:
+        file_content = await file.read()
+        msg.add_attachment(
+            file_content,
+            maintype="application",
+            subtype="octet-stream",
+            filename=file.filename,
+        )
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
@@ -73,8 +74,9 @@ Inviato automaticamente dal sito PrismaLab
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
         return True
+
     except Exception as e:
-        print("Errore invio email:", e)
+        print("❌ Errore email:", e)
         return False
 
 
@@ -88,5 +90,5 @@ async def api_send_email(
 ):
     ok = await send_email_with_optional_file(name, surname, email, message, file)
     if not ok:
-        raise HTTPException(status_code=500, detail="Impossibile inviare l'email.")
-    return {"message": "Email inviata con successo"}
+        raise HTTPException(status_code=500, detail="Errore invio email")
+    return {"message": "Email inviata!"}

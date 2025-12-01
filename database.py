@@ -1,21 +1,19 @@
-import os
 import sqlite3
+import os
 
-# Path dinamico: locale = backend/feedback.db | Render = /data/feedback.db
-IS_PRODUCTION = os.getenv("RENDER") is not None
+# cartella dentro il progetto (scrivibile)
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend_data")
 
-if IS_PRODUCTION:
-    DB_PATH = "/data/feedback.db"
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DB_PATH = os.path.join(BASE_DIR, "feedback.db")
+os.makedirs(BASE_DIR, exist_ok=True)
 
+DB_PATH = os.path.join(BASE_DIR, "feedback.db")
+
+def get_connection():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    return conn
 
 def init_db():
-    """Crea il database se non esiste."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
@@ -32,8 +30,3 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-
-def get_connection():
-    """Ritorna una connessione al DB corretto."""
-    return sqlite3.connect(DB_PATH)
