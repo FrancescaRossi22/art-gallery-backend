@@ -18,16 +18,20 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 
-# CORS per Netlify
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ← in produzione metti il dominio Netlify
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Inizializza DB e router
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Backend PrismaLab is running!"}
+
+
 init_db()
 app.include_router(feedback_router)
 
@@ -60,13 +64,16 @@ Inviato automaticamente dal sito PrismaLab
 """)
 
     if file:
-        file_content = await file.read()
-        msg.add_attachment(
-            file_content,
-            maintype="application",
-            subtype="octet-stream",
-            filename=file.filename,
-        )
+        try:
+            file_content = await file.read()
+            msg.add_attachment(
+                file_content,
+                maintype="application",
+                subtype="octet-stream",
+                filename=file.filename,
+            )
+        except Exception as e:
+            print("Errore lettura allegato:", e)
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
@@ -79,7 +86,6 @@ Inviato automaticamente dal sito PrismaLab
         print("❌ Errore email:", e)
         return False
 
-
 @app.post("/send-email")
 async def api_send_email(
     name: str = Form(...),
@@ -88,7 +94,10 @@ async def api_send_email(
     message: str = Form(...),
     file: UploadFile | None = File(None),
 ):
+
     ok = await send_email_with_optional_file(name, surname, email, message, file)
+
     if not ok:
         raise HTTPException(status_code=500, detail="Errore invio email")
+
     return {"message": "Email inviata!"}
