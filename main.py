@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import resend
 import os
 import base64
-
 from database import init_db
 from feedback import router as feedback_router
 

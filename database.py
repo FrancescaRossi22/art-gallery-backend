@@ -1,32 +1,57 @@
-import sqlite3
 import os
+import sqlite3
+from typing import Optional
 
-# cartella dentro il progetto (scrivibile)
-BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend_data")
+import psycopg2
 
-os.makedirs(BASE_DIR, exist_ok=True)
 
-DB_PATH = os.path.join(BASE_DIR, "feedback.db")
+DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
+
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    return conn
+    """
+    Se esiste DATABASE_URL -> usa PostgreSQL (Render).
+    Altrimenti usa SQLite locale (feedback.db) per sviluppo.
+    """
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL)
+    else:
+        return sqlite3.connect("feedback.db")
+
 
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            surname TEXT NOT NULL,
-            email TEXT,
-            rating INTEGER NOT NULL,
-            comment TEXT NOT NULL,
-            date TEXT
-        );
-    """)
+    if DATABASE_URL:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                surname TEXT NOT NULL,
+                email TEXT,
+                rating INTEGER NOT NULL,
+                comment TEXT NOT NULL,
+                date TIMESTAMPTZ DEFAULT NOW()
+            );
+            """
+        )
+    else:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                surname TEXT NOT NULL,
+                email TEXT,
+                rating INTEGER NOT NULL,
+                comment TEXT NOT NULL,
+                date TEXT
+            );
+            """
+        )
 
     conn.commit()
+    cur.close()
     conn.close()
