@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from email.message import EmailMessage
-import os
 from dotenv import load_dotenv
 import resend
+import os
+import base64
 
 from database import init_db
 from feedback import router as feedback_router
@@ -19,7 +19,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://prismalab.pages.dev",
-        "http://localhost:5173"
+        "http://localhost:5173",
     ],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
@@ -32,7 +32,6 @@ def root():
 
 init_db()
 app.include_router(feedback_router)
-
 
 async def send_email_with_optional_file(
     name: str,
@@ -51,13 +50,18 @@ async def send_email_with_optional_file(
         <p>Inviato automaticamente dal sito PrismaLab</p>
     """
 
-    attachment_data = None
+    attachments = []
 
     if file:
-        attachment_data = [{
+        file_bytes = await file.read()
+
+        encoded = base64.b64encode(file_bytes).decode("utf-8")
+
+        attachments.append({
             "filename": file.filename,
-            "content": (await file.read()).decode("latin-1"),
-        }]
+            "content": encoded,
+            "type": file.content_type or "application/octet-stream",
+        })
 
     try:
         resend.Emails.send({
@@ -65,8 +69,9 @@ async def send_email_with_optional_file(
             "to": [RECIPIENT_EMAIL],
             "subject": "Nuova richiesta preventivo",
             "html": html_body,
-            "attachments": attachment_data,
+            "attachments": attachments,
         })
+
         return True
 
     except Exception as e:
