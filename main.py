@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import resend
 import os
 import base64
-
+from database import init_db
 from feedback import router as feedback_router
 
 load_dotenv()
@@ -29,7 +29,10 @@ app.add_middleware(
 def root():
     return {"status": "ok", "message": "Backend PrismaLab is running!"}
 
+init_db()
+
 app.include_router(feedback_router)
+
 
 async def send_email_with_optional_file(
     name: str,
@@ -38,6 +41,7 @@ async def send_email_with_optional_file(
     message: str,
     file: UploadFile | None,
 ):
+
     html_body = f"""
         <h2>Nuova richiesta preventivo</h2>
         <p><strong>Nome:</strong> {name}</p>
@@ -52,7 +56,6 @@ async def send_email_with_optional_file(
 
     if file:
         file_bytes = await file.read()
-
         encoded = base64.b64encode(file_bytes).decode("utf-8")
 
         attachments.append({
@@ -69,7 +72,6 @@ async def send_email_with_optional_file(
             "html": html_body,
             "attachments": attachments,
         })
-
         return True
 
     except Exception as e:
