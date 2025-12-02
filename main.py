@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import resend
 import os
 import base64
-from database import init_db
+
 from feedback import router as feedback_router
 
 load_dotenv()
@@ -29,7 +29,6 @@ app.add_middleware(
 def root():
     return {"status": "ok", "message": "Backend PrismaLab is running!"}
 
-init_db()
 app.include_router(feedback_router)
 
 async def send_email_with_optional_file(
@@ -85,7 +84,6 @@ async def api_send_email(
     message: str = Form(...),
     file: UploadFile | None = File(None),
 ):
-
     ok = await send_email_with_optional_file(name, surname, email, message, file)
 
     if not ok:
