@@ -19,24 +19,36 @@ def get_feedback():
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute(
+        # PostgreSQL usa %s, SQLite usa ?
+        query = (
+            "SELECT id, name, surname, rating, comment, date FROM feedback ORDER BY id DESC"
+            if IS_POSTGRES else
             "SELECT id, name, surname, rating, comment, date FROM feedback ORDER BY id DESC"
         )
 
+        cur.execute(query)
         rows = cur.fetchall()
         conn.close()
 
-        return [
-            {
+        formatted = []
+
+        for r in rows:
+            date_value = r[5]
+
+            # Se PostgreSQL → datetime; se SQLite → stringa
+            if hasattr(date_value, "isoformat"):
+                date_value = date_value.isoformat()
+
+            formatted.append({
                 "id": r[0],
                 "name": r[1],
                 "surname": r[2],
                 "rating": r[3],
                 "comment": r[4],
-                "date": r[5],
-            }
-            for r in rows
-        ]
+                "date": date_value
+            })
+
+        return formatted
 
     except Exception as e:
         print("❌ ERROR GET FEEDBACK:", e)
@@ -49,21 +61,21 @@ def add_feedback(item: Feedback):
         conn = get_connection()
         cur = conn.cursor()
 
-        now = (
-            datetime.now()
-            if IS_POSTGRES
-            else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
+        now = datetime.utcnow().isoformat()
 
-        cur.execute(
+        # PostgreSQL usa %s — SQLite usa ?
+        query = (
             "INSERT INTO feedback (name, surname, email, rating, comment, date) VALUES (%s, %s, %s, %s, %s, %s)"
             if IS_POSTGRES else
-            "INSERT INTO feedback (name, surname, email, rating, comment, date) VALUES (?, ?, ?, ?, ?, ?)",
-            (item.name, item.surname, item.email, item.rating, item.comment, now),
+            "INSERT INTO feedback (name, surname, email, rating, comment, date) VALUES (?, ?, ?, ?, ?, ?)"
         )
 
+        params = (item.name, item.surname, item.email, item.rating, item.comment, now)
+
+        cur.execute(query, params)
         conn.commit()
         conn.close()
+
         return {"message": "Feedback saved!"}
 
     except Exception as e:
