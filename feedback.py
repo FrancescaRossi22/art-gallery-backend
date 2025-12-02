@@ -19,7 +19,6 @@ def get_feedback():
         conn = get_connection()
         cur = conn.cursor()
 
-        # PostgreSQL usa %s, SQLite usa ?
         query = (
             "SELECT id, name, surname, rating, comment, date FROM feedback ORDER BY id DESC"
             if IS_POSTGRES else
@@ -35,7 +34,6 @@ def get_feedback():
         for r in rows:
             date_value = r[5]
 
-            # Se PostgreSQL → datetime; se SQLite → stringa
             if hasattr(date_value, "isoformat"):
                 date_value = date_value.isoformat()
 
@@ -63,7 +61,6 @@ def add_feedback(item: Feedback):
 
         now = datetime.utcnow().isoformat()
 
-        # PostgreSQL usa %s — SQLite usa ?
         query = (
             "INSERT INTO feedback (name, surname, email, rating, comment, date) VALUES (%s, %s, %s, %s, %s, %s)"
             if IS_POSTGRES else
