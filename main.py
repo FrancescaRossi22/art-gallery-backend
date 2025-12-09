@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 import resend
 import os
 import base64
-from database import init_db
-from feedback import router as feedback_router
 
 load_dotenv()
 
@@ -21,43 +19,34 @@ app.add_middleware(
         "http://localhost:5173",
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Backend PrismaLab is running!"}
+    return {"status": "ok"}
 
-init_db()
-
-app.include_router(feedback_router)
-
-
-async def send_email_with_optional_file(
-    name: str,
-    surname: str,
-    email: str,
-    message: str,
-    file: UploadFile | None,
+@app.post("/send-email")
+async def api_send_email(
+    name: str = Form(...),
+    surname: str = Form(...),
+    email: str = Form(...),
+    message: str = Form(...),
+    file: UploadFile | None = File(None),
 ):
-
     html_body = f"""
         <h2>Nuova richiesta preventivo</h2>
-        <p><strong>Nome:</strong> {name}</p>
-        <p><strong>Cognome:</strong> {surname}</p>
-        <p><strong>Email:</strong> {email}</p>
-        <p><strong>Messaggio:</strong><br>{message}</p>
-        <hr>
-        <p>Inviato automaticamente dal sito PrismaLab</p>
+        <p><b>Nome:</b> {name}</p>
+        <p><b>Cognome:</b> {surname}</p>
+        <p><b>Email:</b> {email}</p>
+        <p><b>Messaggio:</b><br>{message}</p>
     """
 
     attachments = []
 
     if file:
-        file_bytes = await file.read()
-        encoded = base64.b64encode(file_bytes).decode("utf-8")
-
+        encoded = base64.b64encode(await file.read()).decode("utf-8")
         attachments.append({
             "filename": file.filename,
             "content": encoded,
@@ -72,23 +61,7 @@ async def send_email_with_optional_file(
             "html": html_body,
             "attachments": attachments,
         })
-        return True
-
+        return {"message": "Email inviata"}
     except Exception as e:
-        print("❌ Errore RESEND:", e)
-        return False
-
-@app.post("/send-email")
-async def api_send_email(
-    name: str = Form(...),
-    surname: str = Form(...),
-    email: str = Form(...),
-    message: str = Form(...),
-    file: UploadFile | None = File(None),
-):
-    ok = await send_email_with_optional_file(name, surname, email, message, file)
-
-    if not ok:
+        print(e)
         raise HTTPException(status_code=500, detail="Errore invio email")
-
-    return {"message": "Email inviata!"}

@@ -2,7 +2,5 @@ services:
   - type: web
     name: prismalab-backend
     env: python
-    region: frankfurt
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
-    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000

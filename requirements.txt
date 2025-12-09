@@ -4,4 +4,3 @@ python-dotenv
 pydantic
 python-multipart
 resend
-psycopg2-binary
