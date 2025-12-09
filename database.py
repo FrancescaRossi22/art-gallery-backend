@@ -3,13 +3,11 @@ import psycopg2
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL not set")
+
 def get_connection():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL not set")
-    return psycopg2.connect(
-        DATABASE_URL,
-        sslmode="require"
-    )
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 def init_db():
     conn = get_connection()
@@ -23,7 +21,7 @@ def init_db():
             email TEXT,
             rating INTEGER NOT NULL,
             comment TEXT NOT NULL,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            date TIMESTAMPTZ DEFAULT now()
         );
     """)
 
